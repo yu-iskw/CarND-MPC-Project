@@ -112,13 +112,13 @@ int main() {
             Eigen::VectorXd ptsx_car(num_waypoints);
             Eigen::VectorXd ptsy_car(num_waypoints);
 
-            for (int p = 0; p < num_waypoints; p++) {
-              double x_t = ptsx[p] - px;
-              double y_t = ptsy[p] - py;
+            for (int i = 0; i < num_waypoints; i++) {
+              double x_t = ptsx[i] - px;
+              double y_t = ptsy[i] - py;
               // Homogeneous transformation (translation & rotation)
               // Minus sign in counter clockwise direction
-              ptsx_car(p) = cos(psi)*x_t + sin(psi)*y_t;
-              ptsy_car(p) = - sin(psi)*x_t + cos(psi)*y_t;
+              ptsx_car(i) = cos(psi)*x_t + sin(psi)*y_t;
+              ptsy_car(i) = - sin(psi)*x_t + cos(psi)*y_t;
             }
 
             // Fit a polynomial to the traformed waypoints
@@ -129,21 +129,19 @@ int main() {
             const double cte = coeffs[0];
             const double epsi = -atan(coeffs[1]);
 
-            // Find the optimal actuator values
+            // Taking into consideration latency we use the vehicle model in the current state.
             const double latency = 0.1;
             const double Lf = 2.67;
-
-            // Taking into account latency we use the vehicle model in the current state
             double px_delayed = v * latency;
             double py_delayed = 0;
             double psi_delayed = v / Lf * (- steer_value) * latency;
             double v_delayed = v + throttle_value * latency;
             double cte_delayed = cte + v * sin(epsi) * latency;
             double epsi_delayed = epsi + psi_delayed;
-
             Eigen::VectorXd state_delayed(6);
             state_delayed << px_delayed, py_delayed, psi_delayed, v_delayed, cte_delayed, epsi_delayed;
 
+            // Find the optimal actuator values.
             auto vars = mpc.Solve(state_delayed, coeffs);
             steer_value = vars[0]/deg2rad(25)/Lf;
             throttle_value = vars[1];
